@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { getProjectStatus } from './services/api'
 
 const navigation = [
   ['Home', '#/'],
@@ -10,10 +9,9 @@ const navigation = [
 ]
 
 const teamMembers = [
-  { name: 'Team member name', role: 'Role to be confirmed', focus: 'Add the agreed project responsibility.' },
-  { name: 'Team member name', role: 'Role to be confirmed', focus: 'Add the agreed project responsibility.' },
-  { name: 'Team member name', role: 'Role to be confirmed', focus: 'Add the agreed project responsibility.' },
-  { name: 'Team member name', role: 'Role to be confirmed', focus: 'Add the agreed project responsibility.' },
+  { name: 'Arnav Chachra', id: '1024170073', role: 'Backend & Testing' },
+  { name: 'Kunwar Shauryaveer', id: '1024170078', role: 'Frontend' },
+  { name: 'Piyush Sharan', id: '1024170072', role: 'Database & Documentation' },
 ]
 
 const problemStatement = '“Recording participation awards during a live university lab interrupts the faculty workflow and can lead to missed, delayed, or incorrectly attributed entries. SmartToken will reduce that interruption while preserving faculty control, correction history, and reliable operation during network failure.”'
@@ -60,12 +58,6 @@ function App() {
 }
 
 function Home() {
-  const [status, setStatus] = useState(null)
-
-  useEffect(() => {
-    getProjectStatus().then(setStatus).catch(() => setStatus(null))
-  }, [])
-
   return <>
     <section className="hero" aria-labelledby="hero-title">
       <div className="hero-copy">
@@ -76,7 +68,6 @@ function Home() {
           <a className="button" href="#/planning-v1">Open Planning Presentation v1 <ArrowIcon /></a>
           <a className="text-link" href="#/project">Explore the project <ArrowIcon /></a>
         </div>
-        {status && <p className="status" aria-live="polite">{status.message}</p>}
       </div>
       <div className="hero-system" aria-label="SmartToken system overview">
         <div className="signal signal-one" /><div className="signal signal-two" />
@@ -130,26 +121,24 @@ function Project() { return <section className="page">
 </section> }
 
 function Team() { return <section className="page">
-  <p className="eyebrow">The team</p><h1>People building SmartToken.</h1><p className="lead">Team membership and responsibility assignments will be added once finalized. No names have been assumed.</p>
-  <div className="team-grid">{teamMembers.map((member, index) => <article key={index}><div className="avatar" aria-hidden="true">{String(index + 1).padStart(2, '0')}</div><p className="member-label">Team assignment</p><h2>{member.name}</h2><h3>{member.role}</h3><p>{member.focus}</p></article>)}</div>
+  <p className="eyebrow">The team</p><h1>People building SmartToken.</h1>
+  <div className="team-grid">{teamMembers.map((member, index) => <article key={member.id}><div className="avatar" aria-hidden="true">{String(index + 1).padStart(2, '0')}</div><p className="member-label">{member.id}</p><h2>{member.name}</h2><h3>{member.role}</h3></article>)}</div>
   <div className="team-note"><PrivacyIcon /><p><strong>Roles represented in the system:</strong> Faculty, TA, Student, and Administrator. These are SmartToken user roles, distinct from the team’s own project responsibilities.</p></div>
 </section> }
 
 function Presentations() { return <section className="page">
   <p className="eyebrow">Project documentation & presentations</p><h1>Deliverables with their history intact.</h1><p className="lead">This area is for the team’s Software Engineering deliverables. Each published version will retain its presentation date, authors, and change summary.</p>
-  <div className="deliverable-list"><article className="deliverable current-deliverable"><div className="deliverable-number">01</div><div><p className="eyebrow">Current deliverable</p><h2>Planning Presentation v1</h2><p>Initial planning presentation for the SmartToken project.</p><dl><div><dt>Presentation date</dt><dd>To be confirmed</dd></div><div><dt>Version</dt><dd>v1</dd></div><div><dt>Authors</dt><dd>SmartToken team — to be confirmed</dd></div></dl></div><a className="button" href="#/planning-v1">Open page <ArrowIcon /></a></article>
-  <article className="deliverable muted-deliverable"><div className="deliverable-number">02</div><div><p className="eyebrow">Future version, if the plan changes</p><h2>Planning Presentation v2</h2><p>A separate, versioned planning page will be published if a material plan update is needed.</p></div><span className="pending">Not published</span></article>
-  <article className="deliverable muted-deliverable"><div className="deliverable-number">03</div><div><p className="eyebrow">Future deliverable</p><h2>Demo & later presentations</h2><p>Later demonstrations and presentation materials will appear here with accessible earlier versions.</p></div><span className="pending">Not published</span></article></div>
+  <div className="deliverable-list"><article className="deliverable current-deliverable"><div className="deliverable-number">01</div><div><p className="eyebrow">Current deliverable</p><h2>Planning Presentation v1</h2><p>Initial planning presentation for the SmartToken project.</p><dl><div><dt>Presentation date</dt><dd>—</dd></div><div><dt>Version</dt><dd>v1</dd></div><div><dt>Authors</dt><dd>Arnav Chachra · Kunwar Shauryaveer · Piyush Sharan</dd></div></dl></div><a className="button" href="#/planning-v1">Open page <ArrowIcon /></a></article></div>
 </section> }
 
 function PlanningV1() { return <section className="page presentation-page">
   <a className="back-link" href="#/presentations">← All presentations</a><p className="eyebrow">Current deliverable · v1</p><h1>Planning Presentation v1</h1><p className="lead">The team will present this planning material directly from the SmartToken website.</p>
-  <div className="presentation-meta"><div><span>Presentation date</span><strong>To be confirmed</strong></div><div><span>Version</span><strong>v1</strong></div><div><span>Authors</span><strong>SmartToken team — to be confirmed</strong></div></div>
-  <div className="presentation-stage"><div className="stage-top"><span className="stage-mark"><TokenIcon /></span><span>SmartToken / Planning v1</span><span>Presentation content pending</span></div><div className="stage-content"><p className="eyebrow">Presentation workspace</p><h2>Planning material will be published here.</h2><p>Add the approved slide content, sections, or embedded presentation after the team finalizes it. When a newer version is published, this v1 page remains available.</p></div></div>
-  <div className="change-log"><h2>Version notes</h2><p><strong>v1 · Initial planning presentation.</strong> Change summary to be completed at publication.</p></div>
+  <div className="presentation-meta"><div><span>Presentation date</span><strong>—</strong></div><div><span>Version</span><strong>v1</strong></div><div><span>Authors</span><strong>Arnav Chachra · Kunwar Shauryaveer · Piyush Sharan</strong></div></div>
+  <div className="presentation-stage"><div className="stage-top"><span className="stage-mark"><TokenIcon /></span><span>SmartToken / Planning v1</span></div><div className="stage-content"><p className="eyebrow">Planning presentation</p><h2>SmartToken</h2></div></div>
+  <div className="change-log"><h2>Version notes</h2><p><strong>v1 · Initial planning presentation.</strong></p></div>
 </section> }
 
-function Admin() { return <section className="page admin-page"><p className="eyebrow">Instructor & team administration</p><h1>Deliverable publishing area.</h1><p className="lead">The upload and publishing workflow will connect to the planned backend later. This frontend placeholder preserves the future route without implying that upload is available yet.</p><div className="admin-placeholder"><span className="feature-icon"><UploadIcon /></span><h2>Admin sign-in & upload coming next</h2><p>Planned capabilities: drag-and-drop file or folder upload, title/version/date/change-summary metadata, and publishing to a permanent deliverable page while retaining older versions.</p><button type="button" disabled>Sign in unavailable</button></div></section> }
+function Admin() { return <section className="page admin-page"><p className="eyebrow">Instructor & team administration</p><h1>Admin</h1></section> }
 
 function NotFound() { return <section className="page not-found"><p className="eyebrow">Page not found</p><h1>That page has not been published.</h1><a className="button" href="#/">Return home <ArrowIcon /></a></section> }
 
@@ -161,6 +150,5 @@ function BoltIcon() { return <svg viewBox="0 0 24 24" fill="none" aria-hidden="t
 function RulesIcon() { return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5h14M5 12h14M5 19h14M8 3v4M16 10v4M11 17v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg> }
 function SyncIcon() { return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 7h-5V2M4 17h5v5M19.2 12A7.5 7.5 0 0 0 6.4 6.7L5 7M4.8 12a7.5 7.5 0 0 0 12.8 5.3L19 17" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 function PrivacyIcon() { return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 5 6v5c0 4.8 2.9 8.4 7 10 4.1-1.6 7-5.2 7-10V6l-7-3ZM9.5 12l1.6 1.6 3.7-3.7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg> }
-function UploadIcon() { return <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V3M7 8l5-5 5 5M5 15v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg> }
 
 export default App
