@@ -1,5 +1,49 @@
 import { useEffect, useState } from 'react'
 
+const adminTokenKey = 'smarttoken-admin-token'
+const apiBase = '/api'
+
+async function parseJson(response) {
+  const text = await response.text()
+  return text ? JSON.parse(text) : {}
+}
+
+async function loginToAdmin(email, password) {
+  const response = await fetch(`${apiBase}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Login failed')
+  return data.token
+}
+
+async function uploadFile(token, deliverableId, versionId, file) {
+  const formData = new FormData()
+  formData.append('version_id', versionId)
+  formData.append('file', file)
+
+  const response = await fetch(`${apiBase}/files/upload`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Upload failed')
+  return data
+}
+
+async function publishVersion(token, versionId) {
+  const response = await fetch(`${apiBase}/versions/${versionId}/publish`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Publish failed')
+  return data
+}
+
 const navigation = [
   ['Home', '#/'],
   ['Project', '#/project'],
@@ -138,7 +182,135 @@ function PlanningV1() { return <section className="page presentation-page">
   <div className="change-log"><h2>Version notes</h2><p><strong>v1 · Initial planning presentation.</strong></p></div>
 </section> }
 
-function Admin() { return <section className="page admin-page"><p className="eyebrow">Instructor & team administration</p><h1>Admin</h1></section> }
+function Admin() {
+  const [token, setToken] = useState(() => sessionStorage.getItem(adminTokenKey) || '')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [deliverableId, setDeliverableId] = useState('')
+  const [versionId, setVersionId] = useState('')
+  const [file, setFile] = useState(null)
+  const [busy, setBusy] = useState('')
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (token) sessionStorage.setItem(adminTokenKey, token)
+    else sessionStorage.removeItem(adminTokenKey)
+  }, [token])
+
+  async function handleLogin(event) {
+    event.preventDefault()
+    setBusy('login')
+    setError('')
+    setMessage('')
+    try {
+      const nextToken = await loginToAdmin(email.trim(), password)
+      setToken(nextToken)
+      setPassword('')
+      setMessage('Logged in successfully.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handleUpload(event) {
+    event.preventDefault()
+    setBusy('upload')
+    setError('')
+    setMessage('')
+    try {
+      if (!file) throw new Error('Choose a file first.')
+      const result = await uploadFile(token, deliverableId.trim(), versionId.trim(), file)
+      setMessage(`Uploaded ${result.original_name}.`)
+      setFile(null)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handlePublish(event) {
+    event.preventDefault()
+    setBusy('publish')
+    setError('')
+    setMessage('')
+    try {
+      const result = await publishVersion(token, versionId.trim())
+      setMessage(`Version ${result.version_number} published.`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  function handleLogout() {
+    setToken('')
+    setEmail('')
+    setPassword('')
+    setDeliverableId('')
+    setVersionId('')
+    setFile(null)
+    setMessage('Logged out.')
+    setError('')
+  }
+
+  return (
+    <section className="page admin-page">
+      <p className="eyebrow">Instructor & team administration</p>
+      <h1>Admin</h1>
+      {!token ? (
+        <form className="admin-panel" onSubmit={handleLogin}>
+          <h2>Login</h2>
+          <label>
+            <span>Email</span>
+            <input type="email" value={email} onChange={event => setEmail(event.target.value)} required />
+          </label>
+          <label>
+            <span>Password</span>
+            <input type="password" value={password} onChange={event => setPassword(event.target.value)} required />
+          </label>
+          <button className="button" type="submit" disabled={busy === 'login'}>{busy === 'login' ? 'Logging in...' : 'Log in'}</button>
+        </form>
+      ) : (
+        <>
+          <div className="admin-toolbar">
+            <p>Logged in for this session.</p>
+            <button className="text-button" type="button" onClick={handleLogout}>Log out</button>
+          </div>
+          <form className="admin-panel" onSubmit={handleUpload}>
+            <h2>Upload file</h2>
+            <label>
+              <span>Deliverable ID</span>
+              <input value={deliverableId} onChange={event => setDeliverableId(event.target.value)} inputMode="numeric" required />
+            </label>
+            <label>
+              <span>Version ID</span>
+              <input value={versionId} onChange={event => setVersionId(event.target.value)} inputMode="numeric" required />
+            </label>
+            <label>
+              <span>File</span>
+              <input type="file" onChange={event => setFile(event.target.files?.[0] || null)} required />
+            </label>
+            <button className="button" type="submit" disabled={busy === 'upload'}>{busy === 'upload' ? 'Uploading...' : 'Upload file'}</button>
+          </form>
+          <form className="admin-panel" onSubmit={handlePublish}>
+            <h2>Publish version</h2>
+            <label>
+              <span>Version ID</span>
+              <input value={versionId} onChange={event => setVersionId(event.target.value)} inputMode="numeric" required />
+            </label>
+            <button className="button" type="submit" disabled={busy === 'publish'}>{busy === 'publish' ? 'Publishing...' : 'Publish version'}</button>
+          </form>
+        </>
+      )}
+      {(message || error) && <p className={error ? 'admin-feedback error' : 'admin-feedback success'}>{error || message}</p>}
+    </section>
+  )
+}
 
 function NotFound() { return <section className="page not-found"><p className="eyebrow">Page not found</p><h1>That page has not been published.</h1><a className="button" href="#/">Return home <ArrowIcon /></a></section> }
 
