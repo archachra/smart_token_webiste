@@ -41,3 +41,5 @@ app.use((error, request, response, next) => {
 app.listen(port, () => {
   console.log(`SmartToken server listening on http://localhost:${port}`)
 })
+
+export default app
