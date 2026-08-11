@@ -3,6 +3,7 @@ import express from 'express'
 import pool from './config/database.js'
 import authRouter from './routes/auth.js'
 import deliverablesRouter from './routes/deliverables.js'
+import filesRouter from './routes/files.js'
 import versionsRouter from './routes/versions.js'
 
 const app = express()
@@ -11,6 +12,7 @@ const port = Number(process.env.PORT) || 3001
 app.use(express.json())
 app.use('/api/auth', authRouter)
 app.use('/api/deliverables', deliverablesRouter)
+app.use('/api/files', filesRouter)
 app.use('/api/versions', versionsRouter)
 
 app.get('/api/health', (request, response) => {
