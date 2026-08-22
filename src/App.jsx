@@ -65,7 +65,7 @@ async function fetchDeliverables(token) {
 }
 
 async function fetchVersions(token, deliverableId) {
-  const response = await fetch(`${apiBase}/deliverables/${deliverableId}/versions`, {
+  const response = await fetch(`${apiBase}/api/deliverables/${deliverableId}/versions`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await parseJson(response)
