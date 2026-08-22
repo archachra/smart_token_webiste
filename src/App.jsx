@@ -74,7 +74,7 @@ async function fetchVersions(token, deliverableId) {
 }
 
 async function createDeliverable(token, title, slug) {
-  const response = await fetch(`${apiBase}/deliverables`, {
+  const response = await fetch(`${apiBase}/api/deliverables`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -88,7 +88,7 @@ async function createDeliverable(token, title, slug) {
 }
 
 async function createVersion(token, payload) {
-  const response = await fetch(`${apiBase}/versions`, {
+  const response = await fetch(`${apiBase}/api/versions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
