@@ -199,7 +199,13 @@ function PlanningV1() {
           <button className="pdf-nav-button" type="button" onClick={() => setPlanningV1Page(current => Math.max(1, current - 1))} disabled={planningV1Page === 1}>← Previous</button>
           <button className="pdf-nav-button" type="button" onClick={() => setPlanningV1Page(current => Math.min(planningV1PageCount, current + 1))} disabled={planningV1Page === planningV1PageCount}>Next →</button>
         </div>
-        <iframe key={planningV1Page} className="pdf-viewer" src={`/presentations/planning-v1.pdf#page=${planningV1Page}`} title={`Planning Presentation v1 PDF page ${planningV1Page}`} />
+        <iframe
+          key={planningV1Page}
+          className="pdf-viewer"
+          src={`/presentations/planning-v1.pdf#page=${planningV1Page}&zoom=page-width&toolbar=0&navpanes=0&scrollbar=0`}
+          title={`Planning Presentation v1 PDF page ${planningV1Page}`}
+          scrolling="no"
+        />
       </section>
       <div className="change-log"><h2>Version notes</h2><p><strong>v1 · Initial planning presentation.</strong></p></div>
     </section>
