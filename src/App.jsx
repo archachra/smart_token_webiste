@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 
 const adminTokenKey = 'smarttoken-admin-token'
-const apiBase = '/api'
+const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
 
 async function parseJson(response) {
   const text = await response.text()
@@ -172,13 +172,23 @@ function Team() { return <section className="page">
 
 function Presentations() { return <section className="page">
   <p className="eyebrow">Project documentation & presentations</p><h1>Deliverables with their history intact.</h1><p className="lead">This area is for the team’s Software Engineering deliverables. Each published version will retain its presentation date, authors, and change summary.</p>
-  <div className="deliverable-list"><article className="deliverable current-deliverable"><div className="deliverable-number">01</div><div><p className="eyebrow">Current deliverable</p><h2>Planning Presentation v1</h2><p>Initial planning presentation for the SmartToken project.</p><dl><div><dt>Presentation date</dt><dd>—</dd></div><div><dt>Version</dt><dd>v1</dd></div><div><dt>Authors</dt><dd>Arnav Chachra · Kunwar Shauryaveer · Piyush Sharan</dd></div></dl></div><a className="button" href="#/planning-v1">Open page <ArrowIcon /></a></article></div>
+  <div className="deliverable-list"><article className="deliverable current-deliverable"><div className="deliverable-number">01</div><div><p className="eyebrow">Current deliverable</p><h2>Planning Presentation v1</h2><p>Initial planning presentation for the SmartToken project.</p><dl><div><dt>Presentation date</dt><dd>—</dd></div><div><dt>Version</dt><dd>v1</dd></div><div><dt>Authors</dt><dd>Arnav Chachra · Kunwar Shauryaveer · Piyush Sharan</dd></div></dl></div><a className="button" href="#/planning-v1">Open presentation <ArrowIcon /></a></article></div>
 </section> }
 
 function PlanningV1() { return <section className="page presentation-page">
   <a className="back-link" href="#/presentations">← All presentations</a><p className="eyebrow">Current deliverable · v1</p><h1>Planning Presentation v1</h1><p className="lead">The team will present this planning material directly from the SmartToken website.</p>
   <div className="presentation-meta"><div><span>Presentation date</span><strong>—</strong></div><div><span>Version</span><strong>v1</strong></div><div><span>Authors</span><strong>Arnav Chachra · Kunwar Shauryaveer · Piyush Sharan</strong></div></div>
   <div className="presentation-stage"><div className="stage-top"><span className="stage-mark"><TokenIcon /></span><span>SmartToken / Planning v1</span></div><div className="stage-content"><p className="eyebrow">Planning presentation</p><h2>SmartToken</h2></div></div>
+  <section className="pdf-viewer-shell" aria-labelledby="planning-v1-pdf-heading">
+    <div className="pdf-viewer-header">
+      <div>
+        <p className="eyebrow" id="planning-v1-pdf-heading">Open presentation PDF</p>
+        <h2>Planning Presentation v1</h2>
+      </div>
+      <a className="text-link" href="/presentations/planning-v1.pdf" target="_blank" rel="noreferrer">Open PDF in new tab <ArrowIcon /></a>
+    </div>
+    <iframe className="pdf-viewer" src="/presentations/planning-v1.pdf" title="Planning Presentation v1 PDF" />
+  </section>
   <div className="change-log"><h2>Version notes</h2><p><strong>v1 · Initial planning presentation.</strong></p></div>
 </section> }
 
