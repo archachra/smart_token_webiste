@@ -20,7 +20,7 @@ function getUserIdFromToken(token) {
 }
 
 async function loginToAdmin(email, password) {
-  const response = await fetch(`${apiBase}/auth/login`, {
+  const response = await fetch(`${apiBase}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
