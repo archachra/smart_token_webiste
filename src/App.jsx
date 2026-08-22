@@ -46,7 +46,7 @@ async function uploadFile(token, deliverableId, versionId, file) {
 }
 
 async function publishVersion(token, versionId) {
-  const response = await fetch(`${apiBase}/versions/${versionId}/publish`, {
+  const response = await fetch(`${apiBase}/api/versions/${versionId}/publish`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
   })
