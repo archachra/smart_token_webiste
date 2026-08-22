@@ -56,7 +56,7 @@ async function publishVersion(token, versionId) {
 }
 
 async function fetchDeliverables(token) {
-  const response = await fetch(`${apiBase}/deliverables`, {
+  const response = await fetch(`${apiBase}/api/deliverables`, {
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await parseJson(response)
