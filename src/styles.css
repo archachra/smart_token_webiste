@@ -37,8 +37,10 @@ h1, h2, h3, p { margin-top: 0; } h1 { max-width: 780px; margin-bottom: 23px; fon
 .admin-panel h2 { margin-bottom: 2px; font-size: 1.15rem; }
 .admin-panel label { display: grid; gap: 8px; }
 .admin-panel span { color: #6d8484; font-family: 'DM Mono', monospace; font-size: .62rem; letter-spacing: .04em; text-transform: uppercase; }
-.admin-panel input { width: 100%; padding: 11px 12px; border: 1px solid #cbdad3; border-radius: 8px; background: #fdfefe; color: #102a36; font: inherit; }
+.admin-panel input, .admin-select { width: 100%; padding: 11px 12px; border: 1px solid #cbdad3; border-radius: 8px; background: #fdfefe; color: #102a36; font: inherit; }
+.admin-select { appearance: none; }
 .admin-panel input:focus { outline: 2px solid #b8ddd4; outline-offset: 1px; border-color: #0d776d; }
+.admin-select:focus { outline: 2px solid #b8ddd4; outline-offset: 1px; border-color: #0d776d; }
 .admin-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; padding-top: 4px; }
 .admin-toolbar p { margin: 0; font-size: .88rem; }
 .text-button { padding: 0; border: 0; background: transparent; color: #0d776d; font-weight: 800; cursor: pointer; }

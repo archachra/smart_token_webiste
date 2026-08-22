@@ -10,6 +10,15 @@ async function parseJson(response) {
   return text ? JSON.parse(text) : {}
 }
 
+function getUserIdFromToken(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return Number(payload.userId)
+  } catch {
+    return null
+  }
+}
+
 async function loginToAdmin(email, password) {
   const response = await fetch(`${apiBase}/auth/login`, {
     method: 'POST',
@@ -43,6 +52,52 @@ async function publishVersion(token, versionId) {
   })
   const data = await parseJson(response)
   if (!response.ok) throw new Error(data.error || 'Publish failed')
+  return data
+}
+
+async function fetchDeliverables(token) {
+  const response = await fetch(`${apiBase}/deliverables`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Unable to load deliverables')
+  return data
+}
+
+async function fetchVersions(token, deliverableId) {
+  const response = await fetch(`${apiBase}/deliverables/${deliverableId}/versions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Unable to load versions')
+  return data
+}
+
+async function createDeliverable(token, title, slug) {
+  const response = await fetch(`${apiBase}/deliverables`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ title, slug }),
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Unable to create deliverable')
+  return data
+}
+
+async function createVersion(token, payload) {
+  const response = await fetch(`${apiBase}/versions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Unable to create version')
   return data
 }
 
@@ -215,19 +270,71 @@ function PlanningV1() {
 
 function Admin() {
   const [token, setToken] = useState(() => sessionStorage.getItem(adminTokenKey) || '')
+  const [authorId, setAuthorId] = useState(() => getUserIdFromToken(sessionStorage.getItem(adminTokenKey) || ''))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [deliverableId, setDeliverableId] = useState('')
-  const [versionId, setVersionId] = useState('')
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [deliverables, setDeliverables] = useState([])
+  const [versions, setVersions] = useState([])
+  const [selectedDeliverableId, setSelectedDeliverableId] = useState('')
+  const [selectedVersionId, setSelectedVersionId] = useState('')
+  const [newDeliverableTitle, setNewDeliverableTitle] = useState('')
+  const [newDeliverableSlug, setNewDeliverableSlug] = useState('')
+  const [newVersionNumber, setNewVersionNumber] = useState('v1')
+  const [newVersionDate, setNewVersionDate] = useState('')
+  const [newVersionSummary, setNewVersionSummary] = useState('')
 
   useEffect(() => {
     if (token) sessionStorage.setItem(adminTokenKey, token)
     else sessionStorage.removeItem(adminTokenKey)
   }, [token])
+
+  useEffect(() => {
+    if (!token) return
+    let active = true
+
+    async function loadDeliverables() {
+      try {
+        const data = await fetchDeliverables(token)
+        if (!active) return
+        setDeliverables(data)
+        if (!selectedDeliverableId && data[0]) {
+          setSelectedDeliverableId(String(data[0].id))
+        }
+      } catch (err) {
+        if (active) setError(err.message)
+      }
+    }
+
+    loadDeliverables()
+    return () => { active = false }
+  }, [token])
+
+  useEffect(() => {
+    if (!token || !selectedDeliverableId) return
+    let active = true
+
+    async function loadVersions() {
+      try {
+        const data = await fetchVersions(token, selectedDeliverableId)
+        if (!active) return
+        setVersions(data)
+        if (data[0]) {
+          setSelectedVersionId(String(data[0].id))
+        } else {
+          setSelectedVersionId('')
+        }
+      } catch (err) {
+        if (active) setError(err.message)
+      }
+    }
+
+    loadVersions()
+    return () => { active = false }
+  }, [token, selectedDeliverableId])
 
   async function handleLogin(event) {
     event.preventDefault()
@@ -237,8 +344,53 @@ function Admin() {
     try {
       const nextToken = await loginToAdmin(email.trim(), password)
       setToken(nextToken)
+      setAuthorId(getUserIdFromToken(nextToken))
       setPassword('')
       setMessage('Logged in successfully.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handleCreateDeliverable(event) {
+    event.preventDefault()
+    setBusy('create-deliverable')
+    setError('')
+    setMessage('')
+    try {
+      const result = await createDeliverable(token, newDeliverableTitle.trim(), newDeliverableSlug.trim())
+      setDeliverables(current => [result, ...current])
+      setSelectedDeliverableId(String(result.id))
+      setNewDeliverableTitle('')
+      setNewDeliverableSlug('')
+      setMessage(`Deliverable ${result.title} created.`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handleCreateVersion(event) {
+    event.preventDefault()
+    setBusy('create-version')
+    setError('')
+    setMessage('')
+    try {
+      if (!selectedDeliverableId) throw new Error('Choose a deliverable first.')
+      const result = await createVersion(token, {
+        deliverable_id: Number(selectedDeliverableId),
+        version_number: newVersionNumber.trim(),
+        date: newVersionDate,
+        change_summary: newVersionSummary.trim(),
+        author_id: authorId,
+        status: 'draft',
+      })
+      setVersions(current => [result, ...current])
+      setSelectedVersionId(String(result.id))
+      setMessage(`Version ${result.version_number} created.`)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -253,7 +405,8 @@ function Admin() {
     setMessage('')
     try {
       if (!file) throw new Error('Choose a file first.')
-      const result = await uploadFile(token, deliverableId.trim(), versionId.trim(), file)
+      if (!selectedVersionId) throw new Error('Choose or create a version first.')
+      const result = await uploadFile(token, selectedDeliverableId, selectedVersionId, file)
       setMessage(`Uploaded ${result.original_name}.`)
       setFile(null)
     } catch (err) {
@@ -269,8 +422,12 @@ function Admin() {
     setError('')
     setMessage('')
     try {
-      const result = await publishVersion(token, versionId.trim())
+      if (!selectedVersionId) throw new Error('Choose or create a version first.')
+      const result = await publishVersion(token, selectedVersionId)
       setMessage(`Version ${result.version_number} published.`)
+      setVersions(current => current.map(version => (
+        String(version.id) === String(result.id) ? result : version
+      )))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -282,11 +439,19 @@ function Admin() {
     setToken('')
     setEmail('')
     setPassword('')
-    setDeliverableId('')
-    setVersionId('')
     setFile(null)
     setMessage('Logged out.')
     setError('')
+    setDeliverables([])
+    setVersions([])
+    setSelectedDeliverableId('')
+    setSelectedVersionId('')
+    setAuthorId(null)
+    setNewDeliverableTitle('')
+    setNewDeliverableSlug('')
+    setNewVersionNumber('v1')
+    setNewVersionDate('')
+    setNewVersionSummary('')
   }
 
   return (
@@ -312,15 +477,62 @@ function Admin() {
             <p>Logged in for this session.</p>
             <button className="text-button" type="button" onClick={handleLogout}>Log out</button>
           </div>
+          <form className="admin-panel" onSubmit={handleCreateDeliverable}>
+            <h2>Create deliverable</h2>
+            <label>
+              <span>Title</span>
+              <input value={newDeliverableTitle} onChange={event => setNewDeliverableTitle(event.target.value)} required />
+            </label>
+            <label>
+              <span>Slug</span>
+              <input value={newDeliverableSlug} onChange={event => setNewDeliverableSlug(event.target.value)} required />
+            </label>
+            <button className="button" type="submit" disabled={busy === 'create-deliverable'}>{busy === 'create-deliverable' ? 'Creating...' : 'Create deliverable'}</button>
+          </form>
+          <form className="admin-panel" onSubmit={handleCreateVersion}>
+            <h2>Create version</h2>
+            <label>
+              <span>Deliverable</span>
+              <select className="admin-select" value={selectedDeliverableId} onChange={event => setSelectedDeliverableId(event.target.value)} required>
+                <option value="" disabled>Select deliverable</option>
+                {deliverables.map(deliverable => (
+                  <option key={deliverable.id} value={deliverable.id}>{deliverable.title}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Version number</span>
+              <input value={newVersionNumber} onChange={event => setNewVersionNumber(event.target.value)} required />
+            </label>
+            <label>
+              <span>Date</span>
+              <input type="date" value={newVersionDate} onChange={event => setNewVersionDate(event.target.value)} required />
+            </label>
+            <label>
+              <span>Change summary</span>
+              <input value={newVersionSummary} onChange={event => setNewVersionSummary(event.target.value)} required />
+            </label>
+            <button className="button" type="submit" disabled={busy === 'create-version'}>{busy === 'create-version' ? 'Creating...' : 'Create version'}</button>
+          </form>
           <form className="admin-panel" onSubmit={handleUpload}>
             <h2>Upload file</h2>
             <label>
-              <span>Deliverable ID</span>
-              <input value={deliverableId} onChange={event => setDeliverableId(event.target.value)} inputMode="numeric" required />
+              <span>Selected deliverable</span>
+              <select className="admin-select" value={selectedDeliverableId} onChange={event => setSelectedDeliverableId(event.target.value)} required>
+                <option value="" disabled>Select deliverable</option>
+                {deliverables.map(deliverable => (
+                  <option key={deliverable.id} value={deliverable.id}>{deliverable.title}</option>
+                ))}
+              </select>
             </label>
             <label>
-              <span>Version ID</span>
-              <input value={versionId} onChange={event => setVersionId(event.target.value)} inputMode="numeric" required />
+              <span>Selected version</span>
+              <select className="admin-select" value={selectedVersionId} onChange={event => setSelectedVersionId(event.target.value)} required>
+                <option value="" disabled>Select version</option>
+                {versions.map(version => (
+                  <option key={version.id} value={version.id}>{version.version_number} · {version.status}</option>
+                ))}
+              </select>
             </label>
             <label>
               <span>File</span>
@@ -331,8 +543,13 @@ function Admin() {
           <form className="admin-panel" onSubmit={handlePublish}>
             <h2>Publish version</h2>
             <label>
-              <span>Version ID</span>
-              <input value={versionId} onChange={event => setVersionId(event.target.value)} inputMode="numeric" required />
+              <span>Selected version</span>
+              <select className="admin-select" value={selectedVersionId} onChange={event => setSelectedVersionId(event.target.value)} required>
+                <option value="" disabled>Select version</option>
+                {versions.map(version => (
+                  <option key={version.id} value={version.id}>{version.version_number} · {version.status}</option>
+                ))}
+              </select>
             </label>
             <button className="button" type="submit" disabled={busy === 'publish'}>{busy === 'publish' ? 'Publishing...' : 'Publish version'}</button>
           </form>
