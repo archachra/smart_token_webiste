@@ -35,7 +35,7 @@ async function uploadFile(token, deliverableId, versionId, file) {
   formData.append('version_id', versionId)
   formData.append('file', file)
 
-  const response = await fetch(`${apiBase}/files/upload`, {
+  const response = await fetch(`${apiBase}/api/files/upload`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
