@@ -2,14 +2,25 @@ import { useEffect, useState } from 'react'
 
 const adminTokenKey = 'smarttoken-admin-token'
 const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+const planningV1PageCount = 12
+const planningV1PageImage = page => `/presentations/planning-v1-pages/page-${String(page).padStart(2, '0')}.png`
 
 async function parseJson(response) {
   const text = await response.text()
   return text ? JSON.parse(text) : {}
 }
 
+function getUserIdFromToken(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return Number(payload.userId)
+  } catch {
+    return null
+  }
+}
+
 async function loginToAdmin(email, password) {
-  const response = await fetch(`${apiBase}/auth/login`, {
+  const response = await fetch(`${apiBase}/api/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -24,7 +35,7 @@ async function uploadFile(token, deliverableId, versionId, file) {
   formData.append('version_id', versionId)
   formData.append('file', file)
 
-  const response = await fetch(`${apiBase}/files/upload`, {
+  const response = await fetch(`${apiBase}/api/files/upload`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
@@ -35,12 +46,58 @@ async function uploadFile(token, deliverableId, versionId, file) {
 }
 
 async function publishVersion(token, versionId) {
-  const response = await fetch(`${apiBase}/versions/${versionId}/publish`, {
+  const response = await fetch(`${apiBase}/api/versions/${versionId}/publish`, {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
   })
   const data = await parseJson(response)
   if (!response.ok) throw new Error(data.error || 'Publish failed')
+  return data
+}
+
+async function fetchDeliverables(token) {
+  const response = await fetch(`${apiBase}/api/deliverables`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Unable to load deliverables')
+  return data
+}
+
+async function fetchVersions(token, deliverableId) {
+  const response = await fetch(`${apiBase}/api/deliverables/${deliverableId}/versions`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Unable to load versions')
+  return data
+}
+
+async function createDeliverable(token, title, slug) {
+  const response = await fetch(`${apiBase}/api/deliverables`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ title, slug }),
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Unable to create deliverable')
+  return data
+}
+
+async function createVersion(token, payload) {
+  const response = await fetch(`${apiBase}/api/versions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  })
+  const data = await parseJson(response)
+  if (!response.ok) throw new Error(data.error || 'Unable to create version')
   return data
 }
 
@@ -175,38 +232,109 @@ function Presentations() { return <section className="page">
   <div className="deliverable-list"><article className="deliverable current-deliverable"><div className="deliverable-number">01</div><div><p className="eyebrow">Current deliverable</p><h2>Planning Presentation v1</h2><p>Initial planning presentation for the SmartToken project.</p><dl><div><dt>Presentation date</dt><dd>—</dd></div><div><dt>Version</dt><dd>v1</dd></div><div><dt>Authors</dt><dd>Arnav Chachra · Kunwar Shauryaveer · Piyush Sharan</dd></div></dl></div><a className="button" href="#/planning-v1">Open presentation <ArrowIcon /></a></article></div>
 </section> }
 
-function PlanningV1() { return <section className="page presentation-page">
-  <a className="back-link" href="#/presentations">← All presentations</a><p className="eyebrow">Current deliverable · v1</p><h1>Planning Presentation v1</h1><p className="lead">The team will present this planning material directly from the SmartToken website.</p>
-  <div className="presentation-meta"><div><span>Presentation date</span><strong>—</strong></div><div><span>Version</span><strong>v1</strong></div><div><span>Authors</span><strong>Arnav Chachra · Kunwar Shauryaveer · Piyush Sharan</strong></div></div>
-  <div className="presentation-stage"><div className="stage-top"><span className="stage-mark"><TokenIcon /></span><span>SmartToken / Planning v1</span></div><div className="stage-content"><p className="eyebrow">Planning presentation</p><h2>SmartToken</h2></div></div>
-  <section className="pdf-viewer-shell" aria-labelledby="planning-v1-pdf-heading">
-    <div className="pdf-viewer-header">
-      <div>
-        <p className="eyebrow" id="planning-v1-pdf-heading">Open presentation PDF</p>
-        <h2>Planning Presentation v1</h2>
-      </div>
-      <a className="text-link" href="/presentations/planning-v1.pdf" target="_blank" rel="noreferrer">Open PDF in new tab <ArrowIcon /></a>
-    </div>
-    <iframe className="pdf-viewer" src="/presentations/planning-v1.pdf" title="Planning Presentation v1 PDF" />
-  </section>
-  <div className="change-log"><h2>Version notes</h2><p><strong>v1 · Initial planning presentation.</strong></p></div>
-</section> }
+function PlanningV1() {
+  const [planningV1Page, setPlanningV1Page] = useState(1)
+
+  return (
+    <section className="page presentation-page">
+      <a className="back-link" href="#/presentations">← All presentations</a><p className="eyebrow">Current deliverable · v1</p><h1>Planning Presentation v1</h1><p className="lead">The team will present this planning material directly from the SmartToken website.</p>
+      <div className="presentation-meta"><div><span>Presentation date</span><strong>—</strong></div><div><span>Version</span><strong>v1</strong></div><div><span>Authors</span><strong>Arnav Chachra · Kunwar Shauryaveer · Piyush Sharan</strong></div></div>
+      <div className="presentation-stage"><div className="stage-top"><span className="stage-mark"><TokenIcon /></span><span>SmartToken / Planning v1</span></div><div className="stage-content"><p className="eyebrow">Planning presentation</p><h2>SmartToken</h2></div></div>
+      <section className="pdf-viewer-shell" aria-labelledby="planning-v1-pdf-heading">
+        <div className="pdf-viewer-header">
+          <div>
+            <p className="eyebrow" id="planning-v1-pdf-heading">Open presentation PDF</p>
+            <h2>Planning Presentation v1</h2>
+          </div>
+          <div className="pdf-viewer-actions">
+            <span className="pdf-page-indicator">Page {planningV1Page} / {planningV1PageCount}</span>
+            <a className="text-link" href="/presentations/planning-v1.pdf" target="_blank" rel="noreferrer">Open PDF in new tab <ArrowIcon /></a>
+          </div>
+        </div>
+        <div className="pdf-viewer-controls" aria-label="PDF navigation controls">
+          <button className="pdf-nav-button" type="button" onClick={() => setPlanningV1Page(current => Math.max(1, current - 1))} disabled={planningV1Page === 1}>← Previous</button>
+          <button className="pdf-nav-button" type="button" onClick={() => setPlanningV1Page(current => Math.min(planningV1PageCount, current + 1))} disabled={planningV1Page === planningV1PageCount}>Next →</button>
+        </div>
+        <div className="pdf-viewer-frame">
+          <img
+            className="pdf-viewer"
+            src={planningV1PageImage(planningV1Page)}
+            alt={`Planning Presentation v1 page ${planningV1Page}`}
+          />
+        </div>
+      </section>
+      <div className="change-log"><h2>Version notes</h2><p><strong>v1 · Initial planning presentation.</strong></p></div>
+    </section>
+  )
+}
 
 function Admin() {
   const [token, setToken] = useState(() => sessionStorage.getItem(adminTokenKey) || '')
+  const [authorId, setAuthorId] = useState(() => getUserIdFromToken(sessionStorage.getItem(adminTokenKey) || ''))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [deliverableId, setDeliverableId] = useState('')
-  const [versionId, setVersionId] = useState('')
   const [file, setFile] = useState(null)
   const [busy, setBusy] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [deliverables, setDeliverables] = useState([])
+  const [versions, setVersions] = useState([])
+  const [selectedDeliverableId, setSelectedDeliverableId] = useState('')
+  const [selectedVersionId, setSelectedVersionId] = useState('')
+  const [newDeliverableTitle, setNewDeliverableTitle] = useState('')
+  const [newDeliverableSlug, setNewDeliverableSlug] = useState('')
+  const [newVersionNumber, setNewVersionNumber] = useState('v1')
+  const [newVersionDate, setNewVersionDate] = useState('')
+  const [newVersionSummary, setNewVersionSummary] = useState('')
 
   useEffect(() => {
     if (token) sessionStorage.setItem(adminTokenKey, token)
     else sessionStorage.removeItem(adminTokenKey)
   }, [token])
+
+  useEffect(() => {
+    if (!token) return
+    let active = true
+
+    async function loadDeliverables() {
+      try {
+        const data = await fetchDeliverables(token)
+        if (!active) return
+        setDeliverables(data)
+        if (!selectedDeliverableId && data[0]) {
+          setSelectedDeliverableId(String(data[0].id))
+        }
+      } catch (err) {
+        if (active) setError(err.message)
+      }
+    }
+
+    loadDeliverables()
+    return () => { active = false }
+  }, [token])
+
+  useEffect(() => {
+    if (!token || !selectedDeliverableId) return
+    let active = true
+
+    async function loadVersions() {
+      try {
+        const data = await fetchVersions(token, selectedDeliverableId)
+        if (!active) return
+        setVersions(data)
+        if (data[0]) {
+          setSelectedVersionId(String(data[0].id))
+        } else {
+          setSelectedVersionId('')
+        }
+      } catch (err) {
+        if (active) setError(err.message)
+      }
+    }
+
+    loadVersions()
+    return () => { active = false }
+  }, [token, selectedDeliverableId])
 
   async function handleLogin(event) {
     event.preventDefault()
@@ -216,8 +344,53 @@ function Admin() {
     try {
       const nextToken = await loginToAdmin(email.trim(), password)
       setToken(nextToken)
+      setAuthorId(getUserIdFromToken(nextToken))
       setPassword('')
       setMessage('Logged in successfully.')
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handleCreateDeliverable(event) {
+    event.preventDefault()
+    setBusy('create-deliverable')
+    setError('')
+    setMessage('')
+    try {
+      const result = await createDeliverable(token, newDeliverableTitle.trim(), newDeliverableSlug.trim())
+      setDeliverables(current => [result, ...current])
+      setSelectedDeliverableId(String(result.id))
+      setNewDeliverableTitle('')
+      setNewDeliverableSlug('')
+      setMessage(`Deliverable ${result.title} created.`)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  async function handleCreateVersion(event) {
+    event.preventDefault()
+    setBusy('create-version')
+    setError('')
+    setMessage('')
+    try {
+      if (!selectedDeliverableId) throw new Error('Choose a deliverable first.')
+      const result = await createVersion(token, {
+        deliverable_id: Number(selectedDeliverableId),
+        version_number: newVersionNumber.trim(),
+        date: newVersionDate,
+        change_summary: newVersionSummary.trim(),
+        author_id: authorId,
+        status: 'draft',
+      })
+      setVersions(current => [result, ...current])
+      setSelectedVersionId(String(result.id))
+      setMessage(`Version ${result.version_number} created.`)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -232,7 +405,8 @@ function Admin() {
     setMessage('')
     try {
       if (!file) throw new Error('Choose a file first.')
-      const result = await uploadFile(token, deliverableId.trim(), versionId.trim(), file)
+      if (!selectedVersionId) throw new Error('Choose or create a version first.')
+      const result = await uploadFile(token, selectedDeliverableId, selectedVersionId, file)
       setMessage(`Uploaded ${result.original_name}.`)
       setFile(null)
     } catch (err) {
@@ -248,8 +422,12 @@ function Admin() {
     setError('')
     setMessage('')
     try {
-      const result = await publishVersion(token, versionId.trim())
+      if (!selectedVersionId) throw new Error('Choose or create a version first.')
+      const result = await publishVersion(token, selectedVersionId)
       setMessage(`Version ${result.version_number} published.`)
+      setVersions(current => current.map(version => (
+        String(version.id) === String(result.id) ? result : version
+      )))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -261,11 +439,19 @@ function Admin() {
     setToken('')
     setEmail('')
     setPassword('')
-    setDeliverableId('')
-    setVersionId('')
     setFile(null)
     setMessage('Logged out.')
     setError('')
+    setDeliverables([])
+    setVersions([])
+    setSelectedDeliverableId('')
+    setSelectedVersionId('')
+    setAuthorId(null)
+    setNewDeliverableTitle('')
+    setNewDeliverableSlug('')
+    setNewVersionNumber('v1')
+    setNewVersionDate('')
+    setNewVersionSummary('')
   }
 
   return (
@@ -291,15 +477,62 @@ function Admin() {
             <p>Logged in for this session.</p>
             <button className="text-button" type="button" onClick={handleLogout}>Log out</button>
           </div>
+          <form className="admin-panel" onSubmit={handleCreateDeliverable}>
+            <h2>Create deliverable</h2>
+            <label>
+              <span>Title</span>
+              <input value={newDeliverableTitle} onChange={event => setNewDeliverableTitle(event.target.value)} required />
+            </label>
+            <label>
+              <span>Slug</span>
+              <input value={newDeliverableSlug} onChange={event => setNewDeliverableSlug(event.target.value)} required />
+            </label>
+            <button className="button" type="submit" disabled={busy === 'create-deliverable'}>{busy === 'create-deliverable' ? 'Creating...' : 'Create deliverable'}</button>
+          </form>
+          <form className="admin-panel" onSubmit={handleCreateVersion}>
+            <h2>Create version</h2>
+            <label>
+              <span>Deliverable</span>
+              <select className="admin-select" value={selectedDeliverableId} onChange={event => setSelectedDeliverableId(event.target.value)} required>
+                <option value="" disabled>Select deliverable</option>
+                {deliverables.map(deliverable => (
+                  <option key={deliverable.id} value={deliverable.id}>{deliverable.title}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>Version number</span>
+              <input value={newVersionNumber} onChange={event => setNewVersionNumber(event.target.value)} required />
+            </label>
+            <label>
+              <span>Date</span>
+              <input type="date" value={newVersionDate} onChange={event => setNewVersionDate(event.target.value)} required />
+            </label>
+            <label>
+              <span>Change summary</span>
+              <input value={newVersionSummary} onChange={event => setNewVersionSummary(event.target.value)} required />
+            </label>
+            <button className="button" type="submit" disabled={busy === 'create-version'}>{busy === 'create-version' ? 'Creating...' : 'Create version'}</button>
+          </form>
           <form className="admin-panel" onSubmit={handleUpload}>
             <h2>Upload file</h2>
             <label>
-              <span>Deliverable ID</span>
-              <input value={deliverableId} onChange={event => setDeliverableId(event.target.value)} inputMode="numeric" required />
+              <span>Selected deliverable</span>
+              <select className="admin-select" value={selectedDeliverableId} onChange={event => setSelectedDeliverableId(event.target.value)} required>
+                <option value="" disabled>Select deliverable</option>
+                {deliverables.map(deliverable => (
+                  <option key={deliverable.id} value={deliverable.id}>{deliverable.title}</option>
+                ))}
+              </select>
             </label>
             <label>
-              <span>Version ID</span>
-              <input value={versionId} onChange={event => setVersionId(event.target.value)} inputMode="numeric" required />
+              <span>Selected version</span>
+              <select className="admin-select" value={selectedVersionId} onChange={event => setSelectedVersionId(event.target.value)} required>
+                <option value="" disabled>Select version</option>
+                {versions.map(version => (
+                  <option key={version.id} value={version.id}>{version.version_number} · {version.status}</option>
+                ))}
+              </select>
             </label>
             <label>
               <span>File</span>
@@ -310,8 +543,13 @@ function Admin() {
           <form className="admin-panel" onSubmit={handlePublish}>
             <h2>Publish version</h2>
             <label>
-              <span>Version ID</span>
-              <input value={versionId} onChange={event => setVersionId(event.target.value)} inputMode="numeric" required />
+              <span>Selected version</span>
+              <select className="admin-select" value={selectedVersionId} onChange={event => setSelectedVersionId(event.target.value)} required>
+                <option value="" disabled>Select version</option>
+                {versions.map(version => (
+                  <option key={version.id} value={version.id}>{version.version_number} · {version.status}</option>
+                ))}
+              </select>
             </label>
             <button className="button" type="submit" disabled={busy === 'publish'}>{busy === 'publish' ? 'Publishing...' : 'Publish version'}</button>
           </form>
